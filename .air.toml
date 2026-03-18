@@ -1,0 +1,9 @@
+[build]
+  cmd = "./build.sh"
+  bin = "/usr/bin/true"
+  include_ext = ["adoc"]
+  exclude_dir = ["tmp"]
+  delay = 200
+
+[misc]
+  clean_on_exit = false

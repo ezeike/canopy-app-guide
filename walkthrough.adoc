@@ -1,0 +1,253 @@
+= Building a Guestbook App: A Complete Walkthrough
+:toc: left
+:toc-title: Contents
+:sectnums:
+:source-highlighter: highlight.js
+:icons: font
+
+This walkthrough builds a guestbook app from scratch — generating specs, building the plugin and frontend, and running everything locally. It follows the workflow described in <<../article#,the main article>>.
+
+== Generate the Spec
+
+Start Claude Code in the `ai-build` directory and run the spec generator:
+
+[source]
+----
+> /generate-spec
+----
+
+Claude will ask a series of questions. Here's the full interaction:
+
+=== Choosing the App
+
+****
+icon:robot[] **Claude:** What kind of app would you like to build?
+
+icon:user[] **You:** A public guestbook. Anyone with a wallet can post a short message on-chain. Messages are immutable — no editing or deleting.
+****
+
+=== Plugin or Frontend?
+
+****
+icon:robot[] **Claude:** Do you need a plugin spec, a frontend spec, or both?
+
+icon:user[] **You:** Both
+****
+
+=== Naming
+
+****
+icon:robot[] **Claude:** What should the app be called? This determines the spec filenames and directory names.
+
+icon:user[] **You:** guestbook
+****
+
+Claude creates `specs/guestbook-plugin.md` and `specs/guestbook-frontend.md`.
+
+=== Plugin Details
+
+Claude walks through each section of the plugin spec:
+
+****
+icon:robot[] **Claude:** What transaction types does the guestbook need?
+
+icon:user[] **You:** Just one: `post_message`. Fields: sender_address (bytes), message (string, max 280 chars).
+****
+
+****
+icon:robot[] **Claude:** What state objects should be stored on-chain?
+
+icon:user[] **You:** A Message with id, author_address, content, and block height. A MessageCounter with next_id for auto-incrementing IDs.
+****
+
+****
+icon:robot[] **Claude:** Any business logic details for post_message?
+
+icon:user[] **You:** Validate sender_address is 20 bytes, message is non-empty and <= 280 chars. Increment the counter, store the message with the current block height.
+****
+
+****
+icon:robot[] **Claude:** What should the WebSocket broadcast?
+
+icon:user[] **You:** EndBlock broadcasts the last 50 messages ordered by id descending as `{ "type": "end_block", "height": 123, "messages": [...] }`
+****
+
+=== Frontend Details
+
+****
+icon:robot[] **Claude:** What visual style should the frontend use?
+
+icon:user[] **You:** Dark terminal aesthetic — near-black background (#0D1117), bright green accent (#00FF88), monospace font for messages.
+****
+
+****
+icon:robot[] **Claude:** What are the key UI features?
+
+icon:user[] **You:** Wallet connect top-right. A textarea for posting messages with a live 280-char counter. A scrolling feed of messages, newest first, with author address and block height. New messages animate in via WebSocket.
+****
+
+****
+icon:robot[] **Claude:** Any constraints?
+
+icon:user[] **You:** Messages are immutable. WebSocket updates should use useReducer with a Map to avoid full re-renders.
+****
+
+Claude writes both specs to `specs/`. You can review and edit them before building.
+
+== Build the App
+
+Run the build command:
+
+[source]
+----
+> /build-app guestbook
+----
+
+Claude runs three phases:
+
+. **Protocol agent** — reads both specs and the `canopy-crypto` SDK, then writes `specs/guestbook-PROTOCOL.md` with WebSocket message shapes, transaction wire formats, address encoding rules, and Vite proxy config.
+
+. **Plugin agent** — copies the plugin template from `$CANOPY_SRC`, defines proto messages, runs `protoc`, implements `CheckTx`/`DeliverTx` handlers, wires up WebSocket broadcasts in `EndBlock`, and verifies with `go build ./...`.
+
+. **Frontend agent** — scaffolds a Vite + React 18 + TypeScript project, registers message types with `canopy-crypto`, implements the wallet flow, message feed, and post form, then verifies with `npm install && npx vite build`.
+
+The plugin and frontend agents run in parallel. When both complete, Claude reports the results:
+
+[source]
+----
+Plugin (guestbook-plugin/plugin/go):
+- 1 transaction type: post_message
+- State prefixes: {24} messages, {25} counter
+- go build ./... passes clean
+
+Frontend (guestbook-frontend/):
+- Vite + React 18 + TypeScript
+- Dark terminal aesthetic
+- vite build passes clean (0 errors)
+----
+
+== Start the Plugin
+
+Build the plugin binary and start Canopy:
+
+[source,bash]
+----
+cd guestbook-plugin/plugin/go
+make build      # Compiles to ./go-plugin
+cd ../..        # Back to guestbook-plugin/
+canopy start    # Launches plugin automatically via pluginctl.sh
+----
+
+Verify the plugin connected by checking the logs:
+
+[source,bash]
+----
+tail -f /tmp/plugin/go-plugin.log
+----
+
+You should see:
+
+[source]
+----
+WebSocket server starting on :36660/ws
+Handshaking with FSM
+----
+
+== Start the Frontend
+
+In a separate terminal:
+
+[source,bash]
+----
+cd guestbook-frontend
+npm install
+npm run dev
+----
+
+Vite starts on `http://localhost:5173`. Open it in a browser.
+
+== Test the App
+
+=== Connect a Wallet
+
+. Click **Connect Wallet** in the top-right
+. Select an account from the keystore list
+. Enter the password to unlock
+
+=== Post a Message
+
+. Type a message in the textarea (up to 280 characters)
+. Click **Post**
+. The transaction is submitted to the chain
+. On the next block, the message appears in the feed via WebSocket
+
+=== Verify On-Chain
+
+You can query the account balance directly to confirm the transaction fee was deducted:
+
+[source,bash]
+----
+curl -X POST http://localhost:50002/v1/query/account \
+  -H "Content-Type: application/json" \
+  -d '{"address": "<your-address-hex>"}'
+----
+
+== Project Structure
+
+After generation, the directory layout is:
+
+[source]
+----
+ai-build/
+├── specs/
+│   ├── guestbook-plugin.md        # Plugin spec
+│   ├── guestbook-frontend.md      # Frontend spec
+│   └── guestbook-PROTOCOL.md      # Protocol bridge document
+├── guestbook-plugin/
+│   └── plugin/
+│       └── go/
+│           ├── contract/
+│           │   ├── contract.go     # CheckTx, DeliverTx, EndBlock
+│           │   ├── market.go       # Handler implementations
+│           │   ├── error.go        # Error definitions
+│           │   └── plugin.go       # Socket comms, WS dedup
+│           ├── proto/
+│           │   └── tx.proto        # Message definitions
+│           ├── go.mod
+│           ├── main.go
+│           ├── Makefile
+│           └── pluginctl.sh
+└── guestbook-frontend/
+    ├── src/
+    │   ├── App.tsx
+    │   ├── sdk.ts                  # Message type registration
+    │   ├── types.ts
+    │   ├── useMarkets.ts           # WebSocket hook
+    │   └── useWallet.ts            # Wallet connection
+    ├── package.json
+    ├── vite.config.ts
+    └── index.html
+----
+
+== Iterating
+
+If something isn't right after generation, you can ask Claude to make changes directly:
+
+[source]
+----
+> increase the max message length to 500 characters
+----
+
+[source]
+----
+> add a delete_message transaction that only the author can call
+----
+
+[source]
+----
+> change the font to Inter and make the background lighter
+----
+
+Claude will edit the generated code in place. For structural changes like adding a new transaction type, it updates the proto, regenerates, and modifies the handlers.
+
+To start fresh, delete the generated directories and run `/build-app guestbook` again.

@@ -5,7 +5,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="generator" content="Asciidoctor 2.0.26">
-<title>Building a Canopy App: From Spec to Running Locally</title>
+<title>Building a Guestbook App: A Complete Walkthrough</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:300,300italic,400,400italic,600,600italic%7CNoto+Serif:400,400italic,700,700italic%7CDroid+Sans+Mono:400,700">
 <style>
 /*! Asciidoctor default stylesheet | MIT License | https://asciidoctor.org */
@@ -435,450 +435,408 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 </style>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.3/styles/github.min.css">
-<style>
-body {
-  max-width: 1200px;
-}
-
-#content {
-  max-width: 860px;
-}
-</style>
 </head>
 <body class="article toc2 toc-left">
 <div id="header">
-<h1>Building a Canopy App: From Spec to Running Locally</h1>
+<h1>Building a Guestbook App: A Complete Walkthrough</h1>
 <div id="toc" class="toc2">
 <div id="toctitle">Contents</div>
 <ul class="sectlevel1">
-<li><a href="#_introduction">1. Introduction</a></li>
-<li><a href="#_prerequisites">2. Prerequisites</a>
+<li><a href="#_generate_the_spec">1. Generate the Spec</a>
 <ul class="sectlevel2">
-<li><a href="#_environment_setup">2.1. Environment Setup</a></li>
+<li><a href="#_choosing_the_app">1.1. Choosing the App</a></li>
+<li><a href="#_plugin_or_frontend">1.2. Plugin or Frontend?</a></li>
+<li><a href="#_naming">1.3. Naming</a></li>
+<li><a href="#_plugin_details">1.4. Plugin Details</a></li>
+<li><a href="#_frontend_details">1.5. Frontend Details</a></li>
 </ul>
 </li>
-<li><a href="#_writing_a_spec">3. Writing a Spec</a>
+<li><a href="#_build_the_app">2. Build the App</a></li>
+<li><a href="#_start_the_plugin">3. Start the Plugin</a></li>
+<li><a href="#_start_the_frontend">4. Start the Frontend</a></li>
+<li><a href="#_test_the_app">5. Test the App</a>
 <ul class="sectlevel2">
-<li><a href="#_plugin_spec">3.1. Plugin Spec</a></li>
-<li><a href="#_frontend_spec">3.2. Frontend Spec</a></li>
+<li><a href="#_connect_a_wallet">5.1. Connect a Wallet</a></li>
+<li><a href="#_post_a_message">5.2. Post a Message</a></li>
+<li><a href="#_verify_on_chain">5.3. Verify On-Chain</a></li>
 </ul>
 </li>
-<li><a href="#_implementing_the_plugin">4. Implementing the Plugin</a>
-<ul class="sectlevel2">
-<li><a href="#_building_and_running">4.1. Building and Running</a></li>
-<li><a href="#_canopy_configuration">4.2. Canopy Configuration</a></li>
-<li><a href="#_what_can_go_wrong">4.3. What Can Go Wrong</a></li>
-</ul>
-</li>
-<li><a href="#_running_the_frontend">5. Running the Frontend</a></li>
-<li><a href="#_conclusion">6. Conclusion</a></li>
+<li><a href="#_project_structure">6. Project Structure</a></li>
+<li><a href="#_iterating">7. Iterating</a></li>
 </ul>
 </div>
 </div>
 <div id="content">
-<div class="sect1">
-<h2 id="_introduction">1. Introduction</h2>
+<div id="preamble">
 <div class="sectionbody">
 <div class="paragraph">
-<p>Canopy lets you deploy custom blockchain logic as plugins — Go processes that the FSM calls into for transaction validation, state writes, and block lifecycle hooks. Each plugin pairs with a web frontend that talks to it over WebSocket in real time.</p>
+<p>This walkthrough builds a guestbook app from scratch — generating specs, building the plugin and frontend, and running everything locally. It follows the workflow described in <a href="../article.html">the main article</a>.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_generate_the_spec">1. Generate the Spec</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Start Claude Code in the <code>ai-build</code> directory and run the spec generator:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-none hljs">&gt; /generate-spec</code></pre>
+</div>
 </div>
 <div class="paragraph">
-<p>Two SDKs support this workflow. The Go SDK provides a shared WebSocket server for plugins — handling client connections, topic subscriptions, and broadcasts.</p>
+<p>Claude will ask a series of questions. Here&#8217;s the full interaction:</p>
+</div>
+<div class="sect2">
+<h3 id="_choosing_the_app">1.1. Choosing the App</h3>
+<div class="sidebarblock">
+<div class="content">
+<div class="paragraph">
+<p><span class="icon"><i class="fa fa-robot"></i></span> <strong>Claude:</strong> What kind of app would you like to build?</p>
 </div>
 <div class="paragraph">
-<p>The TypeScript SDK (<code>canopy-crypto</code>) handles the browser side: wallet decryption, transaction signing, and protobuf encoding compatible with Canopy&#8217;s Go implementation.</p>
+<p><span class="icon"><i class="fa fa-user"></i></span> <strong>You:</strong> A public guestbook. Anyone with a wallet can post a short message on-chain. Messages are immutable — no editing or deleting.</p>
+</div>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_plugin_or_frontend">1.2. Plugin or Frontend?</h3>
+<div class="sidebarblock">
+<div class="content">
+<div class="paragraph">
+<p><span class="icon"><i class="fa fa-robot"></i></span> <strong>Claude:</strong> Do you need a plugin spec, a frontend spec, or both?</p>
 </div>
 <div class="paragraph">
-<p>This guide walks through the full workflow: writing a spec, generating the plugin and frontend, and running everything locally. We use a simple guestbook app as the example throughout. The <a href="#_implementing_the_plugin">Implementing the Plugin</a> and <a href="#_running_the_frontend">Running the Frontend</a> sections cover how to build and start both sides.</p>
+<p><span class="icon"><i class="fa fa-user"></i></span> <strong>You:</strong> Both</p>
+</div>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_naming">1.3. Naming</h3>
+<div class="sidebarblock">
+<div class="content">
+<div class="paragraph">
+<p><span class="icon"><i class="fa fa-robot"></i></span> <strong>Claude:</strong> What should the app be called? This determines the spec filenames and directory names.</p>
 </div>
 <div class="paragraph">
-<p>We assume the Canopy binary is in PATH and has a config in <code>~/.canopy</code>.</p>
+<p><span class="icon"><i class="fa fa-user"></i></span> <strong>You:</strong> guestbook</p>
+</div>
+</div>
+</div>
+<div class="paragraph">
+<p>Claude creates <code>specs/guestbook-plugin.md</code> and <code>specs/guestbook-frontend.md</code>.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_plugin_details">1.4. Plugin Details</h3>
+<div class="paragraph">
+<p>Claude walks through each section of the plugin spec:</p>
 </div>
 <div class="sidebarblock">
 <div class="content">
 <div class="paragraph">
-<p>The plugin and frontend are separate processes. Canopy starts the plugin automatically on launch via <code>pluginctl.sh</code>, while the frontend is a standalone Vite dev server you start separately.</p>
+<p><span class="icon"><i class="fa fa-robot"></i></span> <strong>Claude:</strong> What transaction types does the guestbook need?</p>
 </div>
+<div class="paragraph">
+<p><span class="icon"><i class="fa fa-user"></i></span> <strong>You:</strong> Just one: <code>post_message</code>. Fields: sender_address (bytes), message (string, max 280 chars).</p>
+</div>
+</div>
+</div>
+<div class="sidebarblock">
+<div class="content">
+<div class="paragraph">
+<p><span class="icon"><i class="fa fa-robot"></i></span> <strong>Claude:</strong> What state objects should be stored on-chain?</p>
+</div>
+<div class="paragraph">
+<p><span class="icon"><i class="fa fa-user"></i></span> <strong>You:</strong> A Message with id, author_address, content, and block height. A MessageCounter with next_id for auto-incrementing IDs.</p>
+</div>
+</div>
+</div>
+<div class="sidebarblock">
+<div class="content">
+<div class="paragraph">
+<p><span class="icon"><i class="fa fa-robot"></i></span> <strong>Claude:</strong> Any business logic details for post_message?</p>
+</div>
+<div class="paragraph">
+<p><span class="icon"><i class="fa fa-user"></i></span> <strong>You:</strong> Validate sender_address is 20 bytes, message is non-empty and &#8656; 280 chars. Increment the counter, store the message with the current block height.</p>
+</div>
+</div>
+</div>
+<div class="sidebarblock">
+<div class="content">
+<div class="paragraph">
+<p><span class="icon"><i class="fa fa-robot"></i></span> <strong>Claude:</strong> What should the WebSocket broadcast?</p>
+</div>
+<div class="paragraph">
+<p><span class="icon"><i class="fa fa-user"></i></span> <strong>You:</strong> EndBlock broadcasts the last 50 messages ordered by id descending as <code>{ "type": "end_block", "height": 123, "messages": [&#8230;&#8203;] }</code></p>
+</div>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_frontend_details">1.5. Frontend Details</h3>
+<div class="sidebarblock">
+<div class="content">
+<div class="paragraph">
+<p><span class="icon"><i class="fa fa-robot"></i></span> <strong>Claude:</strong> What visual style should the frontend use?</p>
+</div>
+<div class="paragraph">
+<p><span class="icon"><i class="fa fa-user"></i></span> <strong>You:</strong> Dark terminal aesthetic — near-black background (#0D1117), bright green accent (#00FF88), monospace font for messages.</p>
+</div>
+</div>
+</div>
+<div class="sidebarblock">
+<div class="content">
+<div class="paragraph">
+<p><span class="icon"><i class="fa fa-robot"></i></span> <strong>Claude:</strong> What are the key UI features?</p>
+</div>
+<div class="paragraph">
+<p><span class="icon"><i class="fa fa-user"></i></span> <strong>You:</strong> Wallet connect top-right. A textarea for posting messages with a live 280-char counter. A scrolling feed of messages, newest first, with author address and block height. New messages animate in via WebSocket.</p>
+</div>
+</div>
+</div>
+<div class="sidebarblock">
+<div class="content">
+<div class="paragraph">
+<p><span class="icon"><i class="fa fa-robot"></i></span> <strong>Claude:</strong> Any constraints?</p>
+</div>
+<div class="paragraph">
+<p><span class="icon"><i class="fa fa-user"></i></span> <strong>You:</strong> Messages are immutable. WebSocket updates should use useReducer with a Map to avoid full re-renders.</p>
+</div>
+</div>
+</div>
+<div class="paragraph">
+<p>Claude writes both specs to <code>specs/</code>. You can review and edit them before building.</p>
 </div>
 </div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_prerequisites">2. Prerequisites</h2>
-<div class="sectionbody">
-<div class="ulist">
-<ul>
-<li>
-<p>Canopy installed and configured</p>
-</li>
-<li>
-<p>Go 1.25+</p>
-</li>
-<li>
-<p>Node.js 20+</p>
-</li>
-<li>
-<p><code>protoc</code> and <code>protoc-go-inject-tag</code> in PATH</p>
-</li>
-</ul>
-</div>
-<div class="sect2">
-<h3 id="_environment_setup">2.1. Environment Setup</h3>
-<div class="paragraph">
-<p>Create a <code>.env</code> file in the <code>ai-build</code> directory with the path to the Canopy plugin source:</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">CANOPY_SRC=/path/to/canopy/plugins</code></pre>
-</div>
-</div>
-<div class="paragraph">
-<p><code>CANOPY_SRC</code> points to the Canopy source directory. The build agent reads this at the start of every session and copies <code>$CANOPY_SRC/plugin/go</code> into your new plugin directory during generation.</p>
-</div>
-</div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="_writing_a_spec">3. Writing a Spec</h2>
+<h2 id="_build_the_app">2. Build the App</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>Every app starts with two spec files: one for the plugin (backend) and one for the frontend. The <code>generate-spec</code> skill walks you through creating both.</p>
-</div>
-<div class="paragraph">
-<p>Run <code>/generate-spec</code> in Claude Code.</p>
-</div>
-<div class="paragraph">
-<p>The skill will ask what your app does and whether to base it on an existing app. It then walks through the key sections interactively — transaction types, state objects, business logic, UI features — and writes the completed spec(s) to <code>specs/</code>.</p>
-</div>
-<div class="admonitionblock tip">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-tip" title="Tip"></i>
-</td>
-<td class="content">
-The templates behind the skill live at <code>specs/template-plugin.md</code> and <code>specs/template-frontend.md</code>. They&#8217;re a menu, not a checklist — skip sections and the build agent will make reasonable assumptions.
-</td>
-</tr>
-</table>
-</div>
-<div class="paragraph">
-<p>Keep specs concise. Describe <strong>what</strong> the app does, not <strong>how</strong> to code it. Expand the examples below to see a complete guestbook spec for each.</p>
-</div>
-<div class="sect2">
-<h3 id="_plugin_spec">3.1. Plugin Spec</h3>
-<div class="paragraph">
-<p>The plugin spec defines transaction types, state objects, business logic, and WebSocket events.</p>
-</div>
-<details>
-<summary class="title">Example guestbook plugin spec</summary>
-<div class="content">
-<div class="listingblock">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-markdown hljs" data-lang="markdown"># On-Chain Guestbook Plugin
-
-This plugin adds a public guestbook to the Canopy blockchain. Anyone with a
-wallet can post a short message on-chain.
-
-## Transaction types
-
-- **post_message** — any funded account can post a message. Fields:
-  sender_address (bytes), message (string, max 280 chars)
-
-## State objects
-
-- **Message** — id (uint64), author_address (bytes), content (string), height (uint64)
-- **MessageCounter** — next_id (uint64)
-
-## Business logic details
-
-### post_message
-- Validate: sender_address is 20 bytes
-- Validate: message is not empty and len(message) &lt;= 280
-- Increment MessageCounter, assign id = counter.next_id
-- Store Message with id, author_address, content, and current block height
-
-## WebSocket events
-
-The plugin runs a WebSocket server on port 36660 (`/ws`).
-
-### EndBlock
-Broadcast the last 50 messages ordered by id descending:
-```json
-{ "type": "end_block", "height": 123, "messages": [...] }
-```</code></pre>
-</div>
-</div>
-</div>
-</details>
-</div>
-<div class="sect2">
-<h3 id="_frontend_spec">3.2. Frontend Spec</h3>
-<div class="paragraph">
-<p>The frontend spec defines the visual style, wallet flow, and UI behavior.</p>
-</div>
-<details>
-<summary class="title">Example guestbook frontend spec</summary>
-<div class="content">
-<div class="listingblock">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-markdown hljs" data-lang="markdown"># On-Chain Guestbook — Frontend Specification
-
-A web frontend for the Canopy Guestbook plugin. Users can connect a wallet,
-post short messages to the blockchain, and watch a live feed of all messages.
-
-Read the backend plugin guestbook-plugin/plugin/go to understand how the
-plugin works before building.
-
-Use a dark terminal aesthetic — near-black background (#0D1117), bright green
-accent (#00FF88), monospace font for messages.
-
----
-
-## Key Constraints
-
-- Messages are immutable once posted. No edit or delete.
-- Max message length is 280 characters. Show a live character counter.
-- WebSocket updates must not cause full re-renders. Reconcile in-place using
-  a `useReducer` pattern with a `Map&lt;id, Message&gt;`.
-
----
-
-## Features
-
-### Global Navigation
-- **Wallet adapter** top-right: "Connect Wallet" when disconnected.
-- **Keystore** — load wallets from Canopy node API; password unlocks session.
-
-### Post Message Form
-Fields:
-- **Message** — textarea, max 280 chars, with live character counter
-- **Post** button (enabled when wallet connected and message non-empty)
-
-On submit:
-- Submits `post_message` transaction
-- Clears textarea on success
-
-### Message Feed
-Scrolling feed, newest first. Each card shows author address, content, and
-block height. New messages animate in via WebSocket end_block events.</code></pre>
-</div>
-</div>
-</div>
-</details>
-</div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="_implementing_the_plugin">4. Implementing the Plugin</h2>
-<div class="sectionbody">
-<div class="paragraph">
-<p>Once your plugin spec is ready, run <code>/build-app &lt;name&gt;</code>.</p>
-</div>
-<div class="paragraph">
-<p>It will copy <code>plugin/go</code> from <code>$CANOPY_SRC</code> into <code>&lt;name&gt;-plugin/plugin/go</code>, define proto messages, implement <code>CheckTx</code> and <code>DeliverTx</code> handlers, and wire up the WebSocket broadcast in <code>EndBlock</code>.</p>
-</div>
-<div class="sect2">
-<h3 id="_building_and_running">4.1. Building and Running</h3>
-<div class="paragraph">
-<p>Build the plugin binary, then start Canopy from the project root:</p>
+<p>Run the build command:</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">cd guestbook-plugin/plugin/go
-make build      # Compiles the plugin to ./go-plugin
-cd ../..        # Back to guestbook-plugin/ — Canopy must run from here
-canopy start    # Canopy calls plugin/go/pluginctl.sh start automatically</code></pre>
+<pre class="highlightjs highlight"><code class="language-none hljs">&gt; /build-app guestbook</code></pre>
 </div>
 </div>
 <div class="paragraph">
-<p>Here&#8217;s how Canopy resolves and launches the plugin:</p>
+<p>Claude runs three phases:</p>
 </div>
 <div class="olist arabic">
 <ol class="arabic">
 <li>
-<p>It reads <code>"plugin": "go"</code> from <code>~/.canopy/config.json</code>. This is a directory name, not a path — path separators and <code>..</code> are rejected.</p>
+<p><strong>Protocol agent</strong> — reads both specs and the <code>canopy-crypto</code> SDK, then writes <code>specs/guestbook-PROTOCOL.md</code> with WebSocket message shapes, transaction wire formats, address encoding rules, and Vite proxy config.</p>
 </li>
 <li>
-<p>It constructs the path <code>plugin/&lt;name&gt;/pluginctl.sh</code> relative to the current working directory, substituting the config value for <code>&lt;name&gt;</code> — so <code>"plugin": "go"</code> becomes <code>plugin/go/pluginctl.sh</code>.</p>
+<p><strong>Plugin agent</strong> — copies the plugin template from <code>$CANOPY_SRC</code>, defines proto messages, runs <code>protoc</code>, implements <code>CheckTx</code>/<code>DeliverTx</code> handlers, wires up WebSocket broadcasts in <code>EndBlock</code>, and verifies with <code>go build ./&#8230;&#8203;</code>.</p>
 </li>
 <li>
-<p>It executes <code>pluginctl.sh start</code>, which spawns the <code>go-plugin</code> binary in the background.</p>
-</li>
-<li>
-<p>It opens a Unix socket at <code>/tmp/plugin/plugin.sock</code> and waits for the plugin to connect.</p>
+<p><strong>Frontend agent</strong> — scaffolds a Vite + React 18 + TypeScript project, registers message types with <code>canopy-crypto</code>, implements the wallet flow, message feed, and post form, then verifies with <code>npm install &amp;&amp; npx vite build</code>.</p>
 </li>
 </ol>
 </div>
 <div class="paragraph">
-<p>This is why <code>canopy start</code> must be run from <code>&lt;name&gt;-plugin/</code> — the generated directory structure <code>&lt;name&gt;-plugin/plugin/go/</code> matches what Canopy expects to find.</p>
+<p>The plugin and frontend agents run in parallel. When both complete, Claude reports the results:</p>
 </div>
-<div class="imageblock">
+<div class="listingblock">
 <div class="content">
-<img src="diag-mermaid-md5-d132558adf209e83ddb8210bd4761084.png" alt="Diagram" width="784" height="545">
-</div>
-</div>
-<div class="admonitionblock warning">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-warning" title="Warning"></i>
-</td>
-<td class="content">
-The <code>plugin</code> value in <code>~/.canopy/config.json</code> must be a plain directory name like <code>go</code>. Canopy rejects values containing path separators or <code>..</code>.
-</td>
-</tr>
-</table>
-</div>
-<div class="paragraph">
-<p>Plugin logs go to <code>/tmp/plugin/go-plugin.log</code>. You can check status or stop the plugin manually with <code>./plugin/go/pluginctl.sh status</code> and <code>./plugin/go/pluginctl.sh stop</code>.</p>
-</div>
-</div>
-<div class="sect2">
-<h3 id="_canopy_configuration">4.2. Canopy Configuration</h3>
-<div class="paragraph">
-<p>The relevant fields in <code>~/.canopy/config.json</code>:</p>
-</div>
-<table class="tableblock frame-all grid-all stretch">
-<colgroup>
-<col style="width: 20%;">
-<col style="width: 20%;">
-<col style="width: 60%;">
-</colgroup>
-<thead>
-<tr>
-<th class="tableblock halign-left valign-top">Field</th>
-<th class="tableblock halign-left valign-top">Value</th>
-<th class="tableblock halign-left valign-top">Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>plugin</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>"go"</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Directory name under <code>plugin/</code> in the CWD</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>pluginTimeoutMS</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>1000</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Socket communication timeout in milliseconds</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>chainId</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>1</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Chain ID — must match the plugin&#8217;s <code>Config.ChainId</code></p></td>
-</tr>
-</tbody>
-</table>
-</div>
-<div class="sect2">
-<h3 id="_what_can_go_wrong">4.3. What Can Go Wrong</h3>
-<div class="paragraph">
-<p>The most common issues after generation:</p>
-</div>
-<table class="tableblock frame-all grid-all stretch">
-<colgroup>
-<col style="width: 40%;">
-<col style="width: 60%;">
-</colgroup>
-<thead>
-<tr>
-<th class="tableblock halign-left valign-top">Symptom</th>
-<th class="tableblock halign-left valign-top">Fix</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><span class="icon red"><i class="fa fa-times-circle"></i></span> Plugin socket not connecting</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Canopy must be running before the plugin starts. The plugin retries the connection to <code>/tmp/plugin/plugin.sock</code> every second. Verify Canopy is running (<code>pgrep canopy</code>) and that <code>~/.canopy/config.json</code> has <code>"plugin": "go"</code>.</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><span class="icon red"><i class="fa fa-times-circle"></i></span> State reads returning empty</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">The FSM calls each hook twice per block (proposal validation and commit). Both calls must produce identical state writes. Check that your write and read use the same key prefix and format.</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><span class="icon red"><i class="fa fa-times-circle"></i></span> WebSocket broadcasts firing twice</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Same dual-call issue. Use the <code>ShouldBroadcastEndBlock(height)</code> guard on the <code>Plugin</code> struct to deduplicate. Always wrap broadcasts and other side effects in this guard.</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><span class="icon red"><i class="fa fa-times-circle"></i></span> <code>"message name X is unknown"</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Transaction not registered in <code>ContractConfig.SupportedTransactions</code> and <code>TransactionTypeUrls</code>.</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><span class="icon red"><i class="fa fa-times-circle"></i></span> <code>"invalid signature"</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Sign bytes mismatch between frontend and plugin. Check protobuf field IDs match.</p></td>
-</tr>
-</tbody>
-</table>
-<div class="sidebarblock">
-<div class="content">
-<div class="paragraph">
-<p>The FSM calls each hook twice per block — once during proposal validation and once during commit. State writes must execute on both calls to produce identical state roots, but side effects like WebSocket broadcasts must be deduplicated. This is the single most common source of bugs in new plugins.</p>
-</div>
-</div>
+<pre class="highlightjs highlight"><code class="language-none hljs">Plugin (guestbook-plugin/plugin/go):
+- 1 transaction type: post_message
+- State prefixes: {24} messages, {25} counter
+- go build ./... passes clean
+
+Frontend (guestbook-frontend/):
+- Vite + React 18 + TypeScript
+- Dark terminal aesthetic
+- vite build passes clean (0 errors)</code></pre>
 </div>
 </div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_running_the_frontend">5. Running the Frontend</h2>
+<h2 id="_start_the_plugin">3. Start the Plugin</h2>
 <div class="sectionbody">
+<div class="paragraph">
+<p>Build the plugin binary and start Canopy:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">cd guestbook-plugin/plugin/go
+make build      # Compiles to ./go-plugin
+cd ../..        # Back to guestbook-plugin/
+canopy start    # Launches plugin automatically via pluginctl.sh</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Verify the plugin connected by checking the logs:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">tail -f /tmp/plugin/go-plugin.log</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>You should see:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-none hljs">WebSocket server starting on :36660/ws
+Handshaking with FSM</code></pre>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_start_the_frontend">4. Start the Frontend</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>In a separate terminal:</p>
+</div>
 <div class="listingblock">
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">cd guestbook-frontend
-npm install   # Installs dependencies and links the canopy-crypto SDK
-npm run dev   # Starts Vite dev server with proxy rules</code></pre>
+npm install
+npm run dev</code></pre>
 </div>
 </div>
 <div class="paragraph">
-<p>Vite proxies <code>/v1/</code> and <code>/ws</code> to the Canopy node, so there&#8217;s no CORS configuration needed and the frontend works against a local node out of the box.</p>
+<p>Vite starts on <code><a href="http://localhost:5173" class="bare">http://localhost:5173</a></code>. Open it in a browser.</p>
 </div>
-<div class="admonitionblock note">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-note" title="Note"></i>
-</td>
-<td class="content">
-The frontend connects to the plugin&#8217;s WebSocket server via the Vite proxy. If you see WebSocket connection errors, verify that the plugin is running and its WebSocket server started on port 36660.
-</td>
-</tr>
-</table>
-</div>
-<details>
-<summary class="title">Vite proxy configuration reference</summary>
-<div class="content">
-<div class="listingblock">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-typescript hljs" data-lang="typescript">// vite.config.ts
-export default defineConfig({
-  server: {
-    proxy: {
-      "/v1/admin": { target: "http://localhost:50003" },
-      "/v1/query": { target: "http://localhost:50002" },
-      "/v1/tx":    { target: "http://localhost:50002" },
-      "/ws":       { target: "ws://localhost:36660", ws: true },
-    },
-  },
-});</code></pre>
-</div>
-</div>
-</div>
-</details>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_conclusion">6. Conclusion</h2>
+<h2 id="_test_the_app">5. Test the App</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_connect_a_wallet">5.1. Connect a Wallet</h3>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>Click <strong>Connect Wallet</strong> in the top-right</p>
+</li>
+<li>
+<p>Select an account from the keystore list</p>
+</li>
+<li>
+<p>Enter the password to unlock</p>
+</li>
+</ol>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_post_a_message">5.2. Post a Message</h3>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>Type a message in the textarea (up to 280 characters)</p>
+</li>
+<li>
+<p>Click <strong>Post</strong></p>
+</li>
+<li>
+<p>The transaction is submitted to the chain</p>
+</li>
+<li>
+<p>On the next block, the message appears in the feed via WebSocket</p>
+</li>
+</ol>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_verify_on_chain">5.3. Verify On-Chain</h3>
+<div class="paragraph">
+<p>You can query the account balance directly to confirm the transaction fee was deducted:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">curl -X POST http://localhost:50002/v1/query/account \
+  -H "Content-Type: application/json" \
+  -d '{"address": "&lt;your-address-hex&gt;"}'</code></pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_project_structure">6. Project Structure</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>The workflow is intentionally minimal: write a spec, run <code>/build-app</code>, build the plugin, and start Canopy. The templates in <code>specs/template-plugin.md</code> and <code>specs/template-frontend.md</code> are the starting point for any new app in this repo.</p>
+<p>After generation, the directory layout is:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-none hljs">ai-build/
+├── specs/
+│   ├── guestbook-plugin.md        # Plugin spec
+│   ├── guestbook-frontend.md      # Frontend spec
+│   └── guestbook-PROTOCOL.md      # Protocol bridge document
+├── guestbook-plugin/
+│   └── plugin/
+│       └── go/
+│           ├── contract/
+│           │   ├── contract.go     # CheckTx, DeliverTx, EndBlock
+│           │   ├── market.go       # Handler implementations
+│           │   ├── error.go        # Error definitions
+│           │   └── plugin.go       # Socket comms, WS dedup
+│           ├── proto/
+│           │   └── tx.proto        # Message definitions
+│           ├── go.mod
+│           ├── main.go
+│           ├── Makefile
+│           └── pluginctl.sh
+└── guestbook-frontend/
+    ├── src/
+    │   ├── App.tsx
+    │   ├── sdk.ts                  # Message type registration
+    │   ├── types.ts
+    │   ├── useMarkets.ts           # WebSocket hook
+    │   └── useWallet.ts            # Wallet connection
+    ├── package.json
+    ├── vite.config.ts
+    └── index.html</code></pre>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_iterating">7. Iterating</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>If something isn&#8217;t right after generation, you can ask Claude to make changes directly:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-none hljs">&gt; increase the max message length to 500 characters</code></pre>
+</div>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-none hljs">&gt; add a delete_message transaction that only the author can call</code></pre>
+</div>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-none hljs">&gt; change the font to Inter and make the background lighter</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Claude will edit the generated code in place. For structural changes like adding a new transaction type, it updates the proto, regenerates, and modifies the handlers.</p>
+</div>
+<div class="paragraph">
+<p>To start fresh, delete the generated directories and run <code>/build-app guestbook</code> again.</p>
 </div>
 </div>
 </div>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2026-03-18 02:25:02 -0400
+Last updated 2026-03-18 02:31:28 -0400
 </div>
 </div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.3/highlight.min.js"></script>
