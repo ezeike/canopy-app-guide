@@ -1,0 +1,162 @@
+= Building a Canopy App: From Spec to Running Locally
+:toc: left
+:toc-title: Contents
+:sectnums:
+:source-highlighter: highlight.js
+:docinfo: shared
+
+== Introduction
+
+This guide walks through building a full-stack application on the Canopy blockchain — from writing a spec to running the plugin and frontend locally.
+
+We assume Canopy is already installed and running.
+
+== Prerequisites
+
+* Canopy installed and running
+* Go 1.21+
+* Node.js 20+
+* `protoc` and `protoc-go-inject-tag` in PATH
+
+== Writing a Spec
+
+Every app starts with two spec files: one for the plugin (backend) and one for the frontend. The `canopy-llm` repo provides templates for both.
+
+Keep them concise — the build agent fills in implementation details. The spec only needs to describe *what* the app does, not *how* to code it.
+
+Many sections of the templates are optional. If you omit the WebSocket events section, the agent will infer a sensible broadcast shape from the state objects. If you omit business logic details for a transaction, the agent will derive reasonable validation rules from the field types and constraints. The more you provide, the more precise the output — but a minimal spec is enough to get a working app.
+
+=== Plugin Spec
+
+The plugin spec lives at `specs/template-plugin.md`. It defines:
+
+* **Transaction types** — what operations users can submit, their fields and constraints
+* **State objects** — what data the plugin stores on-chain
+* **Business logic** — validation and state transitions per transaction
+* **WebSocket events** — what the plugin broadcasts to connected frontends at end of each block
+
+A minimal plugin spec looks like this:
+
+[source,markdown]
+----
+# On-Chain Guestbook Plugin
+
+This plugin adds a public guestbook to the Canopy blockchain. Anyone with a
+wallet can post a short message on-chain.
+
+## Transaction types
+
+- **post_message** — any funded account can post a message. Fields:
+  sender_address (bytes), message (string, max 280 chars)
+
+## State objects
+
+- **Message** — id (uint64), author_address (bytes), content (string), height (uint64)
+- **MessageCounter** — next_id (uint64)
+
+## Business logic details
+
+### post_message
+- Validate: sender_address is 20 bytes
+- Validate: message is not empty and len(message) <= 280
+- Increment MessageCounter, assign id = counter.next_id
+- Store Message with id, author_address, content, and current block height
+
+## WebSocket events
+
+The plugin runs a WebSocket server on port 36660 (`/ws`).
+
+### EndBlock
+Broadcast the last 50 messages ordered by id descending:
+```json
+{ "type": "end_block", "height": 123, "messages": [...] }
+```
+----
+
+=== Frontend Spec
+
+The frontend spec lives at `specs/template-frontend.md`. It defines:
+
+* **Key constraints** — business rules that affect UI behavior
+* **Features** — wallet adapter, create forms, entity cards, real-time updates
+* **Libraries / Frameworks** — Vite + React 18 + TypeScript with Vite proxy config
+
+A minimal frontend spec for the same guestbook:
+
+[source,markdown]
+----
+# On-Chain Guestbook — Frontend Specification
+
+A web frontend for the Canopy Guestbook plugin. Users can connect a wallet,
+post short messages to the blockchain, and watch a live feed of all messages.
+
+Read the backend plugin guestbook-plugin/plugin/go to understand how the
+plugin works before building.
+
+Use a dark terminal aesthetic — near-black background (#0D1117), bright green
+accent (#00FF88), monospace font for messages.
+
+---
+
+## Key Constraints
+
+- Messages are immutable once posted. No edit or delete.
+- Max message length is 280 characters. Show a live character counter.
+- WebSocket updates must not cause full re-renders. Reconcile in-place using
+  a `useReducer` pattern with a `Map<id, Message>`.
+
+---
+
+## Features
+
+### Global Navigation
+- **Wallet adapter** top-right: "Connect Wallet" when disconnected.
+- **Keystore** — load wallets from Canopy node API; password unlocks session.
+
+### Post Message Form
+Fields:
+- **Message** — textarea, max 280 chars, with live character counter
+- **Post** button (enabled when wallet connected and message non-empty)
+
+On submit:
+- Submits `post_message` transaction
+- Clears textarea on success
+
+### Message Feed
+Scrolling feed, newest first. Each card shows author address, content, and
+block height. New messages animate in via WebSocket end_block events.
+
+----
+
+== Implementing the Plugin
+
+Once your plugin spec is ready, hand it to the build agent. It will:
+
+1. Copy the `canopy/` template to `<name>-plugin/`
+2. Define proto messages and regenerate Go code
+3. Implement `CheckTx` and `DeliverTx` handlers
+4. Wire up the WebSocket broadcast in `EndBlock`
+
+[source,bash]
+----
+# After the agent edits .proto files, regenerate Go code
+cd <name>-plugin/plugin/go/proto
+bash _generate.sh
+----
+
+WARNING: Always run `_generate.sh` after editing `.proto` files. The generated `.pb.go` files must be committed alongside the proto sources.
+
+== Running the Frontend
+
+[source,bash]
+----
+cd <name>-frontend
+npm install
+npm run dev
+----
+
+TIP: Vite proxies `/v1/` and `/ws` to the Canopy node — no CORS configuration needed.
+
+== Conclusion
+
+You now have a working Canopy application running locally. The two template files — `specs/template-plugin.md` and `specs/template-frontend.md` — are the starting point for any new app in this repo.
