@@ -175,26 +175,6 @@ Here's how Canopy resolves and launches the plugin:
 
 This is why `canopy start` must be run from `<name>-plugin/` — the generated directory structure `<name>-plugin/plugin/go/` matches what Canopy expects to find.
 
-[mermaid]
-....
-sequenceDiagram
-    participant Dev as Developer
-    participant C as Canopy
-    participant S as pluginctl.sh
-    participant P as go-plugin
-
-    Dev->>C: canopy start
-    C->>C: Read config.Plugin = "go"
-    C->>S: exec plugin/go/pluginctl.sh start
-    S->>P: nohup ./go-plugin
-    C->>C: Listen on /tmp/plugin/plugin.sock
-    P->>C: Connect to Unix socket
-    C->>P: Handshake (FSM config)
-    P->>C: Handshake (plugin config)
-    Note over C,P: Ready — FSM routes transactions to plugin
-....
-
-
 WARNING: The `plugin` value in `~/.canopy/config.json` must be a plain directory name like `go`. Canopy rejects values containing path separators or `..`.
 
 Plugin logs go to `/tmp/plugin/go-plugin.log`. You can check status or stop the plugin manually with `./plugin/go/pluginctl.sh status` and `./plugin/go/pluginctl.sh stop`.
