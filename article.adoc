@@ -16,7 +16,7 @@ The TypeScript SDK (`canopy-crypto`) handles the browser side: wallet decryption
 
 This guide walks through the full workflow: writing a spec, generating the plugin and frontend, and running everything locally. We use a simple guestbook app as the example throughout. The <<_implementing_the_plugin>> and <<_running_the_frontend>> sections cover how to build and start both sides.
 
-We assume the Canopy binary is in PATH and has a config in `~/.canopy`.
+We assume the Canopy binary is in $PATH and has a config in `~/.canopy`.
 
 ****
 The plugin and frontend are separate processes. Canopy starts the plugin automatically on launch via `pluginctl.sh`, while the frontend is a standalone Vite dev server you start separately.
