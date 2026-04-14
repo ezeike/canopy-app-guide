@@ -5,7 +5,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="generator" content="Asciidoctor 2.0.26">
-<title>Building a Canopy App: From Spec to Running Locally</title>
+<title>Building a Canopy App: From Spec to App</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:300,300italic,400,400italic,600,600italic%7CNoto+Serif:400,400italic,700,700italic%7CDroid+Sans+Mono:400,700">
 <style>
 /*! Asciidoctor default stylesheet | MIT License | https://asciidoctor.org */
@@ -447,7 +447,7 @@ body {
 </head>
 <body class="article toc2 toc-left">
 <div id="header">
-<h1>Building a Canopy App: From Spec to Running Locally</h1>
+<h1>Building a Canopy App: From Spec to App</h1>
 <div id="toc" class="toc2">
 <div id="toctitle">Contents</div>
 <ul class="sectlevel1">
@@ -463,11 +463,9 @@ body {
 <li><a href="#_frontend_spec">3.2. Frontend Spec</a></li>
 </ul>
 </li>
-<li><a href="#_implementing_the_plugin">4. Implementing the Plugin</a>
+<li><a href="#_building_the_app">4. Building the App</a>
 <ul class="sectlevel2">
 <li><a href="#_building_and_running">4.1. Building and Running</a></li>
-<li><a href="#_canopy_configuration">4.2. Canopy Configuration</a></li>
-<li><a href="#_what_can_go_wrong">4.3. What Can Go Wrong</a></li>
 </ul>
 </li>
 <li><a href="#_running_the_frontend">5. Running the Frontend</a></li>
@@ -489,7 +487,7 @@ body {
 <p>The TypeScript SDK (<code>canopy-crypto</code>) handles the browser side: wallet decryption, transaction signing, and protobuf encoding compatible with Canopy&#8217;s Go implementation.</p>
 </div>
 <div class="paragraph">
-<p>This guide walks through the full workflow: writing a spec, generating the plugin and frontend, and running everything locally. We use a simple guestbook app as the example throughout. The <a href="#_implementing_the_plugin">Implementing the Plugin</a> and <a href="#_running_the_frontend">Running the Frontend</a> sections cover how to build and start both sides.</p>
+<p>This guide walks through the full workflow: writing a spec, generating the plugin and frontend, and running everything locally. We use a simple guestbook app as the example throughout. The <a href="#_building_the_app">Building the App</a> and <a href="#_running_the_frontend">Running the Frontend</a> sections cover how to build and start both sides.</p>
 </div>
 <div class="paragraph">
 <p>We assume the Canopy binary is in $PATH and has a config in <code>~/.canopy</code>.</p>
@@ -525,7 +523,7 @@ body {
 <div class="sect2">
 <h3 id="_environment_setup">2.1. Environment Setup</h3>
 <div class="paragraph">
-<p>Create a <code>.env</code> file in the <code>ai-build</code> directory with the path to the Canopy plugin source:</p>
+<p>Create a <code>.env</code> file in the <code>canopy-llm</code> directory with the path to the Canopy plugin source:</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -547,8 +545,14 @@ body {
 <div class="paragraph">
 <p>Run <code>/generate-spec</code> in Claude Code.</p>
 </div>
+<div class="imageblock">
+<div class="content">
+<img src="mymarket-gen.png" alt="generate-spec session showing Claude asking clarifying questions about a prediction market app">
+</div>
+<div class="title">Figure 1. The /generate-spec skill asks targeted questions to fill in the spec — here for a Polymarket-style app called CanopyMarket</div>
+</div>
 <div class="paragraph">
-<p>The skill will ask what your app does and whether to base it on an existing app. It then walks through the key sections interactively — transaction types, state objects, business logic, UI features — and writes the completed spec(s) to <code>specs/</code>.</p>
+<p>The skill will ask what your app does, then walk through the key sections interactively — transaction types, state objects, business logic, UI features — and write the completed spec(s) to <code>specs/</code>.</p>
 </div>
 <div class="admonitionblock tip">
 <table>
@@ -670,10 +674,16 @@ block height. New messages animate in via WebSocket end_block events.</code></pr
 </div>
 </div>
 <div class="sect1">
-<h2 id="_implementing_the_plugin">4. Implementing the Plugin</h2>
+<h2 id="_building_the_app">4. Building the App</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>Once your plugin spec is ready, run <code>/build-app &lt;name&gt;</code>.</p>
+<p>Once your specs are ready, run <code>/build-app &lt;name&gt;</code>.</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="build-app.png" alt="build-app session showing protocol agent then parallel plugin and frontend agents">
+</div>
+<div class="title">Figure 2. The /build-app skill runs a protocol agent first, then launches the plugin and frontend agents in parallel</div>
 </div>
 <div class="paragraph">
 <p>It will copy <code>plugin/go</code> from <code>$CANOPY_SRC</code> into <code>&lt;name&gt;-plugin/plugin/go</code>, define proto messages, implement <code>CheckTx</code> and <code>DeliverTx</code> handlers, and wire up the WebSocket broadcast in <code>EndBlock</code>.</p>
@@ -729,90 +739,6 @@ The <code>plugin</code> value in <code>~/.canopy/config.json</code> must be a pl
 <p>Plugin logs go to <code>/tmp/plugin/go-plugin.log</code>. You can check status or stop the plugin manually with <code>./plugin/go/pluginctl.sh status</code> and <code>./plugin/go/pluginctl.sh stop</code>.</p>
 </div>
 </div>
-<div class="sect2">
-<h3 id="_canopy_configuration">4.2. Canopy Configuration</h3>
-<div class="paragraph">
-<p>The relevant fields in <code>~/.canopy/config.json</code>:</p>
-</div>
-<table class="tableblock frame-all grid-all stretch">
-<colgroup>
-<col style="width: 20%;">
-<col style="width: 20%;">
-<col style="width: 60%;">
-</colgroup>
-<thead>
-<tr>
-<th class="tableblock halign-left valign-top">Field</th>
-<th class="tableblock halign-left valign-top">Value</th>
-<th class="tableblock halign-left valign-top">Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>plugin</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>"go"</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Directory name under <code>plugin/</code> in the CWD</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>pluginTimeoutMS</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>1000</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Socket communication timeout in milliseconds</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>chainId</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>1</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Chain ID — must match the plugin&#8217;s <code>Config.ChainId</code></p></td>
-</tr>
-</tbody>
-</table>
-</div>
-<div class="sect2">
-<h3 id="_what_can_go_wrong">4.3. What Can Go Wrong</h3>
-<div class="paragraph">
-<p>The most common issues after generation:</p>
-</div>
-<table class="tableblock frame-all grid-all stretch">
-<colgroup>
-<col style="width: 40%;">
-<col style="width: 60%;">
-</colgroup>
-<thead>
-<tr>
-<th class="tableblock halign-left valign-top">Symptom</th>
-<th class="tableblock halign-left valign-top">Fix</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><span class="icon red"><i class="fa fa-times-circle"></i></span> Plugin socket not connecting</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Canopy must be running before the plugin starts. The plugin retries the connection to <code>/tmp/plugin/plugin.sock</code> every second. Verify Canopy is running (<code>pgrep canopy</code>) and that <code>~/.canopy/config.json</code> has <code>"plugin": "go"</code>.</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><span class="icon red"><i class="fa fa-times-circle"></i></span> State reads returning empty</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">The FSM calls each hook twice per block (proposal validation and commit). Both calls must produce identical state writes. Check that your write and read use the same key prefix and format.</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><span class="icon red"><i class="fa fa-times-circle"></i></span> WebSocket broadcasts firing twice</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Same dual-call issue. Use the <code>ShouldBroadcastEndBlock(height)</code> guard on the <code>Plugin</code> struct to deduplicate. Always wrap broadcasts and other side effects in this guard.</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><span class="icon red"><i class="fa fa-times-circle"></i></span> <code>"message name X is unknown"</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Transaction not registered in <code>ContractConfig.SupportedTransactions</code> and <code>TransactionTypeUrls</code>.</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><span class="icon red"><i class="fa fa-times-circle"></i></span> <code>"invalid signature"</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Sign bytes mismatch between frontend and plugin. Check protobuf field IDs match.</p></td>
-</tr>
-</tbody>
-</table>
-<div class="sidebarblock">
-<div class="content">
-<div class="paragraph">
-<p>The FSM calls each hook twice per block — once during proposal validation and once during commit. State writes must execute on both calls to produce identical state roots, but side effects like WebSocket broadcasts must be deduplicated. This is the single most common source of bugs in new plugins.</p>
-</div>
-</div>
-</div>
-</div>
 </div>
 </div>
 <div class="sect1">
@@ -839,6 +765,30 @@ The frontend connects to the plugin&#8217;s WebSocket server via the Vite proxy.
 </td>
 </tr>
 </table>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="canopymarket-start.png" alt="CanopyMarket frontend on first load — empty market list with Connect Wallet button">
+</div>
+<div class="title">Figure 3. CanopyMarket running locally: the 1940s horse racing aesthetic with an empty market list, ready for a wallet connection</div>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="connecting-wallet.png" alt="Connect Wallet modal showing account list and password field">
+</div>
+<div class="title">Figure 4. Clicking Connect Wallet opens a modal that lists accounts from the Canopy keystore — select one and enter the password to unlock</div>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="postmarket.png" alt="Post a New Market modal with question" width="choices" height="and block height deadline">
+</div>
+<div class="title">Figure 5. Creating a market: a question, two or more choices, and a deadline expressed as a block height</div>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="marketposted.png" alt="CanopyMarket showing a live market with Yes/No odds and a Place Bet button">
+</div>
+<div class="title">Figure 6. After the transaction confirms, the market appears in the feed — odds update in real time as bets come in via WebSocket</div>
 </div>
 <details>
 <summary class="title">Vite proxy configuration reference</summary>
@@ -873,7 +823,7 @@ export default defineConfig({
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2026-03-18 16:51:58 -0400
+Last updated 2026-03-20 14:07:12 -0400
 </div>
 </div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.3/highlight.min.js"></script>

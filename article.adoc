@@ -1,4 +1,4 @@
-= Building a Canopy App: From Spec to Running Locally
+= Building a Canopy App: From Spec to App
 :toc: left
 :toc-title: Contents
 :sectnums:
@@ -14,7 +14,7 @@ Two SDKs support this workflow. The Go SDK provides a shared WebSocket server fo
 
 The TypeScript SDK (`canopy-crypto`) handles the browser side: wallet decryption, transaction signing, and protobuf encoding compatible with Canopy's Go implementation.
 
-This guide walks through the full workflow: writing a spec, generating the plugin and frontend, and running everything locally. We use a simple guestbook app as the example throughout. The <<_implementing_the_plugin>> and <<_running_the_frontend>> sections cover how to build and start both sides.
+This guide walks through the full workflow: writing a spec, generating the plugin and frontend, and running everything locally. We use a simple guestbook app as the example throughout. The <<_building_the_app>> and <<_running_the_frontend>> sections cover how to build and start both sides.
 
 We assume the Canopy binary is in $PATH and has a config in `~/.canopy`.
 
@@ -31,7 +31,7 @@ The plugin and frontend are separate processes. Canopy starts the plugin automat
 
 === Environment Setup
 
-Create a `.env` file in the `ai-build` directory with the path to the Canopy plugin source:
+Create a `.env` file in the `canopy-llm` directory with the path to the Canopy plugin source:
 
 [source,bash]
 ----
@@ -46,7 +46,9 @@ Every app starts with two spec files: one for the plugin (backend) and one for t
 
 Run `/generate-spec` in Claude Code.
 
-The skill will ask what your app does and whether to base it on an existing app. It then walks through the key sections interactively — transaction types, state objects, business logic, UI features — and writes the completed spec(s) to `specs/`.
+image::mymarket-gen.png[generate-spec session showing Claude asking clarifying questions about a prediction market app,title="The /generate-spec skill asks targeted questions to fill in the spec — here for a Polymarket-style app called CanopyMarket"]
+
+The skill will ask what your app does, then walk through the key sections interactively — transaction types, state objects, business logic, UI features — and write the completed spec(s) to `specs/`.
 
 TIP: The templates behind the skill live at `specs/template-plugin.md` and `specs/template-frontend.md`. They're a menu, not a checklist — skip sections and the build agent will make reasonable assumptions.
 
@@ -148,9 +150,11 @@ block height. New messages animate in via WebSocket end_block events.
 ----
 ====
 
-== Implementing the Plugin
+== Building the App
 
-Once your plugin spec is ready, run `/build-app <name>`.
+Once your specs are ready, run `/build-app <name>`.
+
+image::build-app.png[build-app session showing protocol agent then parallel plugin and frontend agents,title="The /build-app skill runs a protocol agent first, then launches the plugin and frontend agents in parallel"]
 
 It will copy `plugin/go` from `$CANOPY_SRC` into `<name>-plugin/plugin/go`, define proto messages, implement `CheckTx` and `DeliverTx` handlers, and wire up the WebSocket broadcast in `EndBlock`.
 
@@ -179,55 +183,6 @@ WARNING: The `plugin` value in `~/.canopy/config.json` must be a plain directory
 
 Plugin logs go to `/tmp/plugin/go-plugin.log`. You can check status or stop the plugin manually with `./plugin/go/pluginctl.sh status` and `./plugin/go/pluginctl.sh stop`.
 
-=== Canopy Configuration
-
-The relevant fields in `~/.canopy/config.json`:
-
-[cols="1,1,3"]
-|===
-| Field | Value | Description
-
-| `plugin`
-| `"go"`
-| Directory name under `plugin/` in the CWD
-
-| `pluginTimeoutMS`
-| `1000`
-| Socket communication timeout in milliseconds
-
-| `chainId`
-| `1`
-| Chain ID — must match the plugin's `Config.ChainId`
-|===
-
-=== What Can Go Wrong
-
-The most common issues after generation:
-
-[cols="2,3"]
-|===
-| Symptom | Fix
-
-| icon:times-circle[role=red] Plugin socket not connecting
-| Canopy must be running before the plugin starts. The plugin retries the connection to `/tmp/plugin/plugin.sock` every second. Verify Canopy is running (`pgrep canopy`) and that `~/.canopy/config.json` has `"plugin": "go"`.
-
-| icon:times-circle[role=red] State reads returning empty
-| The FSM calls each hook twice per block (proposal validation and commit). Both calls must produce identical state writes. Check that your write and read use the same key prefix and format.
-
-| icon:times-circle[role=red] WebSocket broadcasts firing twice
-| Same dual-call issue. Use the `ShouldBroadcastEndBlock(height)` guard on the `Plugin` struct to deduplicate. Always wrap broadcasts and other side effects in this guard.
-
-| icon:times-circle[role=red] `"message name X is unknown"`
-| Transaction not registered in `ContractConfig.SupportedTransactions` and `TransactionTypeUrls`.
-
-| icon:times-circle[role=red] `"invalid signature"`
-| Sign bytes mismatch between frontend and plugin. Check protobuf field IDs match.
-|===
-
-****
-The FSM calls each hook twice per block — once during proposal validation and once during commit. State writes must execute on both calls to produce identical state roots, but side effects like WebSocket broadcasts must be deduplicated. This is the single most common source of bugs in new plugins.
-****
-
 == Running the Frontend
 
 [source,bash]
@@ -240,6 +195,14 @@ npm run dev   # Starts Vite dev server with proxy rules
 Vite proxies `/v1/` and `/ws` to the Canopy node, so there's no CORS configuration needed and the frontend works against a local node out of the box.
 
 NOTE: The frontend connects to the plugin's WebSocket server via the Vite proxy. If you see WebSocket connection errors, verify that the plugin is running and its WebSocket server started on port 36660.
+
+image::canopymarket-start.png[CanopyMarket frontend on first load — empty market list with Connect Wallet button,title="CanopyMarket running locally: the 1940s horse racing aesthetic with an empty market list, ready for a wallet connection"]
+
+image::connecting-wallet.png[Connect Wallet modal showing account list and password field,title="Clicking Connect Wallet opens a modal that lists accounts from the Canopy keystore — select one and enter the password to unlock"]
+
+image::postmarket.png[Post a New Market modal with question, choices, and block height deadline,title="Creating a market: a question, two or more choices, and a deadline expressed as a block height"]
+
+image::marketposted.png[CanopyMarket showing a live market with Yes/No odds and a Place Bet button,title="After the transaction confirms, the market appears in the feed — odds update in real time as bets come in via WebSocket"]
 
 [%collapsible]
 .Vite proxy configuration reference

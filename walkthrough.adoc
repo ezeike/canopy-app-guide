@@ -9,12 +9,16 @@ This walkthrough builds a guestbook app from scratch — generating specs, build
 
 == Generate the Spec
 
-Start Claude Code in the `ai-build` directory and run the spec generator:
+Start Claude Code in the `canopy-llm` directory and run the spec generator:
 
 [source]
 ----
 > /generate-spec
 ----
+
+Claude reads the spec templates, then asks what the app does and follows up with a few targeted questions to fill in the details.
+
+image::mymarket-gen.png[generate-spec session showing Claude asking clarifying questions about a prediction market app,title="Claude working through /generate-spec for a Polymarket-style app — asking about app name, deadline type, refund behavior, and visual style"]
 
 Claude will ask a series of questions. Here's the full interaction:
 
@@ -103,6 +107,8 @@ Run the build command:
 > /build-app guestbook
 ----
 
+image::build-app.png[build-app session showing protocol agent then parallel plugin and frontend agents,title="Claude runs a protocol agent first to establish message contracts, then launches the plugin and frontend agents in parallel"]
+
 Claude runs three phases:
 
 . **Protocol agent** — reads both specs and the `canopy-crypto` SDK, then writes `specs/guestbook-PROTOCOL.md` with WebSocket message shapes, transaction wire formats, address encoding rules, and Vite proxy config.
@@ -166,6 +172,14 @@ npm run dev
 
 Vite starts on `http://localhost:5173`. Open it in a browser.
 
+image::canopymarket-start.png[CanopyMarket frontend on first load — empty market list with Connect Wallet button,title="CanopyMarket on first load: empty market list, wallet not yet connected"]
+
+image::connecting-wallet.png[Connect Wallet modal showing account list and password field,title="The wallet modal lists accounts from the Canopy keystore — select an account and enter the password to unlock"]
+
+image::postmarket.png[Post a New Market modal with question, choices, and block height deadline,title="Posting a market: enter a question, add choices, and set a deadline as a block height"]
+
+image::marketposted.png[CanopyMarket showing a live market with Yes/No odds and a Place Bet button,title="Once the transaction is confirmed on the next block, the market appears — ready to accept bets"]
+
 == Test the App
 
 === Connect a Wallet
@@ -198,7 +212,7 @@ After generation, the directory layout is:
 
 [source]
 ----
-ai-build/
+canopy-llm/
 ├── specs/
 │   ├── guestbook-plugin.md        # Plugin spec
 │   ├── guestbook-frontend.md      # Frontend spec

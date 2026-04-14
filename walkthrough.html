@@ -478,12 +478,21 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <h2 id="_generate_the_spec">1. Generate the Spec</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>Start Claude Code in the <code>ai-build</code> directory and run the spec generator:</p>
+<p>Start Claude Code in the <code>canopy-llm</code> directory and run the spec generator:</p>
 </div>
 <div class="listingblock">
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-none hljs">&gt; /generate-spec</code></pre>
 </div>
+</div>
+<div class="paragraph">
+<p>Claude reads the spec templates, then asks what the app does and follows up with a few targeted questions to fill in the details.</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="mymarket-gen.png" alt="generate-spec session showing Claude asking clarifying questions about a prediction market app">
+</div>
+<div class="title">Figure 1. Claude working through /generate-spec for a Polymarket-style app — asking about app name, deadline type, refund behavior, and visual style</div>
 </div>
 <div class="paragraph">
 <p>Claude will ask a series of questions. Here&#8217;s the full interaction:</p>
@@ -625,6 +634,12 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <pre class="highlightjs highlight"><code class="language-none hljs">&gt; /build-app guestbook</code></pre>
 </div>
 </div>
+<div class="imageblock">
+<div class="content">
+<img src="build-app.png" alt="build-app session showing protocol agent then parallel plugin and frontend agents">
+</div>
+<div class="title">Figure 2. Claude runs a protocol agent first to establish message contracts, then launches the plugin and frontend agents in parallel</div>
+</div>
 <div class="paragraph">
 <p>Claude runs three phases:</p>
 </div>
@@ -708,6 +723,30 @@ npm run dev</code></pre>
 <div class="paragraph">
 <p>Vite starts on <code><a href="http://localhost:5173" class="bare">http://localhost:5173</a></code>. Open it in a browser.</p>
 </div>
+<div class="imageblock">
+<div class="content">
+<img src="canopymarket-start.png" alt="CanopyMarket frontend on first load — empty market list with Connect Wallet button">
+</div>
+<div class="title">Figure 3. CanopyMarket on first load: empty market list, wallet not yet connected</div>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="connecting-wallet.png" alt="Connect Wallet modal showing account list and password field">
+</div>
+<div class="title">Figure 4. The wallet modal lists accounts from the Canopy keystore — select an account and enter the password to unlock</div>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="postmarket.png" alt="Post a New Market modal with question" width="choices" height="and block height deadline">
+</div>
+<div class="title">Figure 5. Posting a market: enter a question, add choices, and set a deadline as a block height</div>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="marketposted.png" alt="CanopyMarket showing a live market with Yes/No odds and a Place Bet button">
+</div>
+<div class="title">Figure 6. Once the transaction is confirmed on the next block, the market appears — ready to accept bets</div>
+</div>
 </div>
 </div>
 <div class="sect1">
@@ -771,7 +810,7 @@ npm run dev</code></pre>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-none hljs">ai-build/
+<pre class="highlightjs highlight"><code class="language-none hljs">canopy-llm/
 ├── specs/
 │   ├── guestbook-plugin.md        # Plugin spec
 │   ├── guestbook-frontend.md      # Frontend spec
@@ -836,7 +875,7 @@ npm run dev</code></pre>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2026-03-18 02:31:28 -0400
+Last updated 2026-03-20 14:07:17 -0400
 </div>
 </div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.3/highlight.min.js"></script>
